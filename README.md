@@ -29,3 +29,17 @@ for (const file of result.files) {
 ```
 
 See `docs/FIGMA_VIDE_COMPILER.md` for the intended full pipeline.
+
+## Figma plugin
+
+This repo includes a local Figma development plugin in `plugin/`.
+
+Install it with Figma → Plugins → Development → Import plugin from manifest → `plugin/manifest.json`.
+
+Then select a frame and export JSON. Compile it with:
+
+```bash
+bun run compile ./figma-vide-export.json ./out InventoryScreen
+```
+
+See `docs/FIGMA_PLUGIN_SETUP.md`.

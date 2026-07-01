@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<style>
+			:root { color-scheme: light dark; }
+			body { margin: 0; padding: 16px; font: 12px Inter, system-ui, sans-serif; background: var(--figma-color-bg); color: var(--figma-color-text); }
+			button { border: 1px solid var(--figma-color-border); border-radius: 6px; padding: 8px 10px; background: var(--figma-color-bg-brand); color: var(--figma-color-text-onbrand); cursor: pointer; }
+			button.secondary { background: var(--figma-color-bg-secondary); color: var(--figma-color-text); }
+			.row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+			textarea { width: 100%; height: 460px; resize: none; box-sizing: border-box; border: 1px solid var(--figma-color-border); border-radius: 8px; padding: 10px; background: var(--figma-color-bg-secondary); color: var(--figma-color-text); font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+			.status { margin-bottom: 12px; color: var(--figma-color-text-secondary); }
+		</style>
+	</head>
+	<body>
+		<div class="row">
+			<button id="export">Export selection</button>
+			<button id="copy" class="secondary">Copy JSON</button>
+			<button id="download" class="secondary">Download JSON</button>
+			<button id="close" class="secondary">Close</button>
+		</div>
+		<div id="status" class="status">Select a frame/component and export.</div>
+		<textarea id="output" spellcheck="false"></textarea>
+		<script>
+			const output = document.getElementById("output");
+			const status = document.getElementById("status");
+
+			document.getElementById("export").onclick = () => parent.postMessage({ pluginMessage: { type: "export" } }, "*");
+			document.getElementById("close").onclick = () => parent.postMessage({ pluginMessage: { type: "close" } }, "*");
+			document.getElementById("copy").onclick = async () => {
+				await navigator.clipboard.writeText(output.value);
+				status.textContent = "Copied JSON to clipboard.";
+			};
+			document.getElementById("download").onclick = () => {
+				const blob = new Blob([output.value], { type: "application/json" });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement("a");
+				a.href = url;
+				a.download = "figma-vide-export.json";
+				a.click();
+				URL.revokeObjectURL(url);
+			};
+
+			onmessage = (event) => {
+				const message = event.data.pluginMessage;
+				if (!message) return;
+				if (message.type === "export") {
+					output.value = JSON.stringify(message.payload, null, "\t");
+					status.textContent = `Exported ${message.payload.document.name}. Save this JSON and compile it in the repo.`;
+				}
+				if (message.type === "error") status.textContent = message.message;
+			};
+		</script>
+	</body>
+</html>

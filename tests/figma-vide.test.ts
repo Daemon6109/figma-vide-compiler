@@ -79,6 +79,7 @@ describe("figma to vide compiler", () => {
 		expect(tsx).toContain("<uicorner CornerRadius={new UDim(0, 14)} />");
 		expect(tsx).toContain("<uigradient");
 		expect(tsx).toContain('Text="Summon"');
+		expect(tsx).toContain("BackgroundTransparency={1}");
 		expect(animationManifest).toContain("ON_CLICK");
 		expect(animationManifest).toContain("Enum.EasingStyle.Quad");
 	});

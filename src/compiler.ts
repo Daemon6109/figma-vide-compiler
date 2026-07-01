@@ -172,7 +172,7 @@ const emitNode = (
 	}
 	if (tag === "textlabel" || tag === "textbutton") {
 		props.push(rawPropLine("Text", stringLiteral(node.characters ?? node.name)));
-		props.push(propLine("BackgroundTransparency", fill?.color ? transparency(fill, node.opacity ?? 1) : "1"));
+		props.push(propLine("BackgroundTransparency", "1"));
 		if (fill?.color) props.push(propLine("TextColor3", color3(fill.color)));
 		if (node.style?.fontSize) props.push(propLine("TextSize", numberLiteral(node.style.fontSize)));
 		const alignX = enumAlignX(node.style?.textAlignHorizontal);
