@@ -39,7 +39,7 @@ Install it with Figma → Plugins → Development → Import plugin from manifes
 Then select a frame and export JSON. Compile it with:
 
 ```bash
-bun run compile ./figma-vide-export.json ./out InventoryScreen
+bun run compile ./figma-vide-export.json ./out InventoryScreen --runtime
 ```
 
 See `docs/FIGMA_PLUGIN_SETUP.md`.

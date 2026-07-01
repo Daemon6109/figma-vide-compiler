@@ -83,4 +83,26 @@ describe("figma to vide compiler", () => {
 		expect(animationManifest).toContain("ON_CLICK");
 		expect(animationManifest).toContain("Enum.EasingStyle.Quad");
 	});
+	it("normalizes root to 0,0 and emits child positions relative to parent", () => {
+		const result = compileFigmaToVide({
+			document: {
+				id: "root",
+				name: "Offset Root",
+				type: "FRAME",
+				absoluteBoundingBox: { x: 679, y: 301, width: 562, height: 478 },
+				children: [
+					{
+						id: "child",
+						name: "Child",
+						type: "FRAME",
+						absoluteBoundingBox: { x: 700, y: 330, width: 100, height: 50 },
+					},
+				],
+			},
+		}, { componentName: "OffsetRoot" });
+		const tsx = result.files.find((file) => file.path === "OffsetRoot.tsx")?.contents ?? "";
+		expect(tsx).toContain("Position={UDim2.fromOffset(0, 0)}");
+		expect(tsx).toContain("Position={UDim2.fromOffset(21, 29)}");
+	});
+
 });

@@ -22,7 +22,7 @@ From this repo:
 
 ```bash
 bun install
-bun run compile ./figma-vide-export.json ./out InventoryScreen
+bun run compile ./figma-vide-export.json ./out InventoryScreen --runtime
 ```
 
 This writes:

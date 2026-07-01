@@ -67,3 +67,21 @@ The Figma plugin should serialize selected page/frame nodes with:
 - `exportSettings` and image fill refs
 
 The repo-side compiler can then stay deterministic and testable.
+
+## Compatibility roadmap
+
+The realistic path to near-full compatibility is staged:
+
+1. **Geometry parity** — absolute bounds normalized into parent-relative Roblox `Position`/`Size`. Implemented.
+2. **Visual parity** — fills, strokes, corners, gradients, opacity, clipping. Partially implemented.
+3. **Prototype animation parity** — Figma reactions become generated manifest entries. Implemented for export; runtime helper started.
+4. **Runtime behavior parity** — map common triggers to Roblox events:
+   - `ON_CLICK` → `GuiButton.Activated`
+   - hover enter/leave → `MouseEnter` / `MouseLeave`
+   - after delay → `task.delay`
+   - open overlay → controller callback by `destinationId`
+5. **Asset parity** — export image fills and produce an asset map to Roblox asset ids.
+6. **Component/state parity** — layer annotations like `#bind=coins`, `#on=onStart`, `#repeat=units` generate typed prop holes.
+7. **Advanced effects** — shadows/blur need Roblox-specific approximations because Roblox GUI has no perfect native Figma blur/drop-shadow equivalent.
+
+Use `--runtime` when compiling to generate `figma-animation-runtime.ts` next to the screen component.

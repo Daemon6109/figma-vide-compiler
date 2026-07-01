@@ -84,25 +84,20 @@ const collectReactions = (node: FigmaNode, into: Array<{ nodeId: string; nodeNam
 	for (const child of node.children ?? []) collectReactions(child, into);
 };
 
+const enumExpression = (value: string): string => value.startsWith("Enum.") ? value : stringLiteral(value);
+
 const emitAnimationManifest = (root: FigmaNode): string => {
 	const reactions: Array<{ nodeId: string; nodeName: string; reaction: FigmaReaction }> = [];
 	collectReactions(root, reactions);
 	const entries = reactions.map(({ nodeId, nodeName, reaction }) => {
 		const transition = reaction.action?.transition;
 		const ease = figmaEaseToRoblox(transition?.easing?.type);
-		return {
-			nodeId,
-			nodeName,
-			trigger: reaction.trigger?.type ?? "UNKNOWN",
-			action: reaction.action?.type ?? "UNKNOWN",
-			destinationId: reaction.action?.destinationId,
-			duration: transition?.duration ?? 0.2,
-			easingStyle: ease.style,
-			easingDirection: ease.direction,
-		};
+		return `\t{\n\t\tnodeId: ${stringLiteral(nodeId)},\n\t\tnodeName: ${stringLiteral(nodeName)},\n\t\ttrigger: ${stringLiteral(reaction.trigger?.type ?? "UNKNOWN")},\n\t\taction: ${stringLiteral(reaction.action?.type ?? "UNKNOWN")},\n\t\tdestinationId: ${reaction.action?.destinationId ? stringLiteral(reaction.action.destinationId) : "undefined"},\n\t\tduration: ${numberLiteral(transition?.duration ?? 0.2)},\n\t\teasingStyle: ${enumExpression(ease.style)},\n\t\teasingDirection: ${enumExpression(ease.direction)},\n\t}`;
 	});
-	return `// Auto-generated from Figma prototype reactions. Wire these into your controller/TweenService layer.\nexport const figmaAnimationManifest = ${JSON.stringify(entries, null, "\t")} as const;\n`;
+	return `// Auto-generated from Figma prototype reactions.\n// Use createFigmaAnimationRuntime(...) from the generated runtime helper to bind common triggers.\nexport const figmaAnimationManifest = [\n${entries.join(",\n")}\n] as const;\n\nexport type FigmaAnimationManifest = typeof figmaAnimationManifest;\n`;
 };
+
+const emitAnimationRuntime = (): string => `// Auto-generated helper for generated Figma animation manifests.\nimport { TweenService } from "@rbxts/services";\n\nexport type FigmaAnimationEntry = {\n\tnodeId: string;\n\tnodeName: string;\n\ttrigger: string;\n\taction: string;\n\tdestinationId?: string;\n\tduration: number;\n\teasingStyle: Enum.EasingStyle;\n\teasingDirection: Enum.EasingDirection;\n};\n\nexport type FigmaAnimationRuntimeOptions = {\n\troot: Instance;\n\tmanifest: readonly FigmaAnimationEntry[];\n\topenByDestinationId?: Record<string, () => void>;\n\tdebug?: boolean;\n};\n\nconst findGuiObject = (root: Instance, name: string): GuiObject | undefined => {\n\tfor (const descendant of root.GetDescendants()) {\n\t\tif (descendant.Name === name && descendant.IsA("GuiObject")) return descendant;\n\t}\n\treturn undefined;\n};\n\nexport const tweenFigmaGui = (gui: GuiObject, entry: FigmaAnimationEntry, goal: Partial<ExtractMembers<GuiObject, Tweenable>> = {}) => {\n\tconst info = new TweenInfo(entry.duration, entry.easingStyle, entry.easingDirection);\n\treturn TweenService.Create(gui, info, goal);\n};\n\nexport const createFigmaAnimationRuntime = (options: FigmaAnimationRuntimeOptions) => {\n\tconst cleanup: Array<() => void> = [];\n\n\tfor (const entry of options.manifest) {\n\t\tconst gui = findGuiObject(options.root, entry.nodeName);\n\t\tif (!gui) {\n\t\t\tif (options.debug) warn("[figma-vide] missing gui object " + entry.nodeName);\n\t\t\tcontinue;\n\t\t}\n\n\t\tif (entry.trigger === "ON_CLICK" && (gui.IsA("GuiButton") || gui.IsA("TextButton") || gui.IsA("ImageButton"))) {\n\t\t\tconst connection = gui.Activated.Connect(() => {\n\t\t\t\tif (entry.destinationId !== undefined) options.openByDestinationId?.[entry.destinationId]?.();\n\t\t\t\tconst tween = tweenFigmaGui(gui, entry, { Rotation: gui.Rotation + 0 });\n\t\t\t\ttween.Play();\n\t\t\t});\n\t\t\tcleanup.push(() => connection.Disconnect());\n\t\t}\n\t}\n\n\treturn {\n\t\tdestroy: () => {\n\t\t\tfor (const dispose of cleanup) dispose();\n\t\t\ttable.clear(cleanup);\n\t\t},\n\t};\n};\n`;
 
 const propLine = (name: string, expression: string): string => `${name}={${expression}}`;
 const rawPropLine = (name: string, expression: string): string => `${name}=${expression}`;
@@ -149,16 +144,20 @@ const emitNode = (
 	node: FigmaNode,
 	screen: { width: number; height: number },
 	assetResolver: NonNullable<CompileOptions["assetResolver"]>,
+	parentRect?: { x: number; y: number; width: number; height: number },
+	preserveRootPosition = false,
 	depth = 0,
 ): string => {
 	const tag = jsxTagFor(node);
 	const rect = rectFor(node, screen);
+	const relativeX = parentRect ? rect.x - parentRect.x : preserveRootPosition ? rect.x : 0;
+	const relativeY = parentRect ? rect.y - parentRect.y : preserveRootPosition ? rect.y : 0;
 	const fill = getSolidPaint(node.fills);
 	const image = getImagePaint(node.fills);
 	const props: string[] = [
 		rawPropLine("key", stringLiteral(node.id)),
 		rawPropLine("Name", stringLiteral(node.name)),
-		propLine("Position", `UDim2.fromOffset(${numberLiteral(rect.x)}, ${numberLiteral(rect.y)})`),
+		propLine("Position", `UDim2.fromOffset(${numberLiteral(relativeX)}, ${numberLiteral(relativeY)})`),
 		propLine("Size", `UDim2.fromOffset(${numberLiteral(rect.width)}, ${numberLiteral(rect.height)})`),
 	];
 	if (node.visible === false) props.push(propLine("Visible", "false"));
@@ -188,7 +187,9 @@ const emitNode = (
 	}
 	const decorators = emitDecorators(node);
 	const layoutHelpers = emitLayoutHelpers(node);
-	const childNodes = (node.children ?? []).filter((child) => child.visible !== false).map((child) => emitNode(child, screen, assetResolver, depth + 1));
+	const childNodes = (node.children ?? [])
+		.filter((child) => child.visible !== false)
+		.map((child) => emitNode(child, screen, assetResolver, rect, preserveRootPosition, depth + 1));
 	const children = [...decorators, ...layoutHelpers, ...childNodes];
 	const joinedProps = props.length <= 4 ? props.join(" ") : `\n${indent(props.join("\n"), depth + 1)}\n${"\t".repeat(depth)}`;
 	if (children.length === 0) return `${"\t".repeat(depth)}<${tag} ${joinedProps} />`;
@@ -214,9 +215,10 @@ export const compileFigmaToVide = (document: FigmaDocument, options: CompileOpti
 	const componentName = options.componentName ?? sanitizeIdentifier(root.name);
 	const warnings: string[] = [];
 	const assetResolver = options.assetResolver ?? ((imageRef: string) => `rbxassetid://${imageRef}`);
-	const body = emitNode(root, screen, assetResolver, 2);
+	const body = emitNode(root, screen, assetResolver, undefined, options.preserveRootPosition ?? false, 2);
 	const contents = `/* eslint-disable */\n// Auto-generated by Anime Renaissance Figma → Vide compiler. Do not hand-edit generated blocks.\nimport Vide from "@rbxts/vide";\n\nexport interface ${componentName}Props {\n\tvisible?: boolean;\n}\n\nexport function ${componentName}(props: ${componentName}Props = {}) {\n\treturn (\n${body}\n\t);\n}\n\nexport default ${componentName};\n`;
 	const files = [{ path: `${componentName}.tsx`, contents }];
 	if (options.includeManifest !== false) files.push({ path: `${componentName}.animations.ts`, contents: emitAnimationManifest(root) });
+	if (options.includeRuntime) files.push({ path: "figma-animation-runtime.ts", contents: emitAnimationRuntime() });
 	return { files, warnings };
 };

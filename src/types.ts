@@ -107,8 +107,11 @@ export type CompileOptions = {
 	componentName?: string;
 	rootName?: string;
 	screenSize?: { width: number; height: number };
+	/** Keep the selected root frame at its Figma canvas coordinates. Defaults to false so generated screens mount at 0,0. */
+	preserveRootPosition?: boolean;
 	assetResolver?: (imageRef: string, node: FigmaNode) => string;
 	includeManifest?: boolean;
+	includeRuntime?: boolean;
 };
 
 export type GeneratedFile = {
