@@ -136,4 +136,31 @@ describe("figma to vide compiler", () => {
 		expect(tsx).toContain("Activated={props.onStart}");
 	});
 
+	it("can emit Interface-style px scaling wrappers", () => {
+		const result = compileFigmaToVide({
+			document: {
+				id: "root",
+				name: "Scaled Root",
+				type: "FRAME",
+				absoluteBoundingBox: { x: 0, y: 0, width: 1920, height: 1080 },
+				cornerRadius: 12,
+				children: [
+					{
+						id: "title",
+						name: "Title",
+						type: "TEXT",
+						characters: "Scaled",
+						absoluteBoundingBox: { x: 100, y: 80, width: 300, height: 60 },
+						style: { fontSize: 42 },
+					},
+				],
+			},
+		}, { componentName: "ScaledRoot", usePx: true, pxImport: 'import px from "../shared/px";' });
+		const tsx = result.files.find((file) => file.path === "ScaledRoot.tsx")?.contents ?? "";
+		expect(tsx).toContain('import px from "../shared/px";');
+		expect(tsx).toContain("Position={px.useUDim2(100, 80)}");
+		expect(tsx).toContain("TextSize={px.useNumber(42)}");
+		expect(tsx).toContain("CornerRadius={px.useUDim(12)}");
+	});
+
 });

@@ -209,27 +209,36 @@ export const createFigmaAnimationRuntime = (options: FigmaAnimationRuntimeOption
 const propLine = (name: string, expression: string): string => `${name}={${expression}}`;
 const rawPropLine = (name: string, expression: string): string => `${name}=${expression}`;
 
-const emitLayoutHelpers = (node: FigmaNode): string[] => {
+const sizeExpression = (x: number, y: number, usePx: boolean): string =>
+	usePx ? `px.useUDim2(${numberLiteral(x)}, ${numberLiteral(y)})` : `UDim2.fromOffset(${numberLiteral(x)}, ${numberLiteral(y)})`;
+
+const udimExpression = (value: number, usePx: boolean): string =>
+	usePx ? `px.useUDim(${numberLiteral(value)})` : `new UDim(0, ${numberLiteral(value)})`;
+
+const numberExpression = (value: number, usePx: boolean): string =>
+	usePx ? `px.useNumber(${numberLiteral(value)})` : numberLiteral(value);
+
+const emitLayoutHelpers = (node: FigmaNode, usePx: boolean): string[] => {
 	if (node.layoutMode !== "HORIZONTAL" && node.layoutMode !== "VERTICAL") return [];
 	const fillDirection = node.layoutMode === "HORIZONTAL" ? "Horizontal" : "Vertical";
 	const horizontal = node.counterAxisAlignItems === "CENTER" ? "Center" : node.counterAxisAlignItems === "MAX" ? "Right" : "Left";
 	const vertical = node.counterAxisAlignItems === "CENTER" ? "Center" : node.counterAxisAlignItems === "MAX" ? "Bottom" : "Top";
 	const padding = [node.paddingTop, node.paddingRight, node.paddingBottom, node.paddingLeft].some((value) => value !== undefined)
-		? `\n\t\t<uipadding PaddingTop={new UDim(0, ${numberLiteral(node.paddingTop ?? 0)})} PaddingRight={new UDim(0, ${numberLiteral(node.paddingRight ?? 0)})} PaddingBottom={new UDim(0, ${numberLiteral(node.paddingBottom ?? 0)})} PaddingLeft={new UDim(0, ${numberLiteral(node.paddingLeft ?? 0)})} />`
+		? `\n\t\t<uipadding PaddingTop={${udimExpression(node.paddingTop ?? 0, usePx)}} PaddingRight={${udimExpression(node.paddingRight ?? 0, usePx)}} PaddingBottom={${udimExpression(node.paddingBottom ?? 0, usePx)}} PaddingLeft={${udimExpression(node.paddingLeft ?? 0, usePx)}} />`
 		: "";
 	return [
-		`<uilistlayout FillDirection={Enum.FillDirection.${fillDirection}} SortOrder={Enum.SortOrder.LayoutOrder} Padding={new UDim(0, ${numberLiteral(node.itemSpacing ?? 0)})} HorizontalAlignment={Enum.HorizontalAlignment.${horizontal}} VerticalAlignment={Enum.VerticalAlignment.${vertical}} />${padding}`,
+		`<uilistlayout FillDirection={Enum.FillDirection.${fillDirection}} SortOrder={Enum.SortOrder.LayoutOrder} Padding={${udimExpression(node.itemSpacing ?? 0, usePx)}} HorizontalAlignment={Enum.HorizontalAlignment.${horizontal}} VerticalAlignment={Enum.VerticalAlignment.${vertical}} />${padding}`,
 	];
 };
 
-const emitDecorators = (node: FigmaNode): string[] => {
+const emitDecorators = (node: FigmaNode, usePx: boolean): string[] => {
 	const decorators: string[] = [];
 	const cornerRadius = node.cornerRadius ?? node.rectangleCornerRadii?.[0];
-	if (cornerRadius && cornerRadius > 0) decorators.push(`<uicorner CornerRadius={new UDim(0, ${numberLiteral(cornerRadius)})} />`);
+	if (cornerRadius && cornerRadius > 0) decorators.push(`<uicorner CornerRadius={${udimExpression(cornerRadius, usePx)}} />`);
 	const stroke = getSolidPaint(node.strokes);
 	if (stroke?.color) {
 		decorators.push(
-			`<uistroke Color={${color3(stroke.color)}} Transparency={${transparency(stroke)}} Thickness={${numberLiteral(node.strokeWeight ?? 1)}} />`,
+			`<uistroke Color={${color3(stroke.color)}} Transparency={${transparency(stroke)}} Thickness={${numberExpression(node.strokeWeight ?? 1, usePx)}} />`,
 		);
 	}
 	const gradient = getGradientPaint(node.fills);
@@ -252,6 +261,7 @@ const emitNode = (
 	screen: { width: number; height: number },
 	assetResolver: NonNullable<CompileOptions["assetResolver"]>,
 	assetExpressionResolver: NonNullable<CompileOptions["assetExpressionResolver"]>,
+	usePx: boolean,
 	parentRect?: { x: number; y: number; width: number; height: number },
 	preserveRootPosition = false,
 	depth = 0,
@@ -265,8 +275,8 @@ const emitNode = (
 	const image = getImagePaint(node.fills);
 	const props: string[] = [
 		rawPropLine("Name", stringLiteral(displayName(node.name))),
-		propLine("Position", `UDim2.fromOffset(${numberLiteral(relativeX)}, ${numberLiteral(relativeY)})`),
-		propLine("Size", `UDim2.fromOffset(${numberLiteral(rect.width)}, ${numberLiteral(rect.height)})`),
+		propLine("Position", sizeExpression(relativeX, relativeY, usePx)),
+		propLine("Size", sizeExpression(rect.width, rect.height, usePx)),
 	];
 	if (node.visible === false) props.push(propLine("Visible", "false"));
 	if (node.opacity !== undefined && node.opacity < 1) props.push(propLine("BackgroundTransparency", numberLiteral(1 - node.opacity)));
@@ -281,7 +291,7 @@ const emitNode = (
 		props.push(annotations.bind ? propLine("Text", `tostring(props.${annotations.bind}())`) : rawPropLine("Text", stringLiteral(node.characters ?? displayName(node.name))));
 		props.push(propLine("BackgroundTransparency", "1"));
 		if (fill?.color) props.push(propLine("TextColor3", color3(fill.color)));
-		if (node.style?.fontSize) props.push(propLine("TextSize", numberLiteral(node.style.fontSize)));
+		if (node.style?.fontSize) props.push(propLine("TextSize", numberExpression(node.style.fontSize, usePx)));
 		const alignX = enumAlignX(node.style?.textAlignHorizontal);
 		const alignY = enumAlignY(node.style?.textAlignVertical);
 		if (alignX) props.push(propLine("TextXAlignment", alignX));
@@ -291,7 +301,7 @@ const emitNode = (
 	if (tag === "textbutton") {
 		const buttonText = node.children && node.children.length > 0 ? "" : node.characters ?? displayName(node.name);
 		props.push(rawPropLine("Text", stringLiteral(buttonText)));
-		if (node.style?.fontSize) props.push(propLine("TextSize", numberLiteral(node.style.fontSize)));
+		if (node.style?.fontSize) props.push(propLine("TextSize", numberExpression(node.style.fontSize, usePx)));
 		props.push(propLine("TextTransparency", buttonText === "" ? "1" : "0"));
 		props.push(propLine("AutoButtonColor", "true"));
 	}
@@ -301,11 +311,11 @@ const emitNode = (
 		props.push(propLine("ImageTransparency", transparency(image, node.opacity ?? 1)));
 		props.push(propLine("BackgroundTransparency", "1"));
 	}
-	const decorators = emitDecorators(node);
-	const layoutHelpers = emitLayoutHelpers(node);
+	const decorators = emitDecorators(node, usePx);
+	const layoutHelpers = emitLayoutHelpers(node, usePx);
 	const childNodes = (node.children ?? [])
 		.filter((child) => child.visible !== false)
-		.map((child) => emitNode(child, screen, assetResolver, assetExpressionResolver, rect, preserveRootPosition, depth + 1));
+		.map((child) => emitNode(child, screen, assetResolver, assetExpressionResolver, usePx, rect, preserveRootPosition, depth + 1));
 	const children = [...decorators, ...layoutHelpers, ...childNodes];
 	const joinedProps = props.length <= 4 ? props.join(" ") : `\n${indent(props.join("\n"), depth + 1)}\n${"\t".repeat(depth)}`;
 	if (children.length === 0) return `${"\t".repeat(depth)}<${tag} ${joinedProps} />`;
@@ -332,10 +342,11 @@ export const compileFigmaToVide = (document: FigmaDocument, options: CompileOpti
 	const warnings: string[] = [];
 	const assetResolver = options.assetResolver ?? ((imageRef: string) => `rbxassetid://${imageRef}`);
 	const assetExpressionResolver = options.assetExpressionResolver ?? ((imageRef: string, node: FigmaNode) => stringLiteral(assetResolver(imageRef, node)));
-	const body = emitNode(root, screen, assetResolver, assetExpressionResolver, undefined, options.preserveRootPosition ?? false, 2);
+	const usePx = options.usePx ?? false;
+	const body = emitNode(root, screen, assetResolver, assetExpressionResolver, usePx, undefined, options.preserveRootPosition ?? false, 2);
 	const componentProps = collectPropTypes(root);
 	const propLines = [...componentProps].map(([name, type]) => `\t${name}: ${type};`).join("\n");
-	const imports = options.assetImport ? `${options.assetImport}\n` : "";
+	const imports = `${options.assetImport ? `${options.assetImport}\n` : ""}${usePx ? `${options.pxImport ?? 'import px from "../shared/px";'}\n` : ""}`;
 	const propsParameter = propLines ? `props: ${componentName}Props` : `props: ${componentName}Props = {}`;
 	const contents = `/* eslint-disable */\n// Auto-generated by Anime Renaissance Figma → Vide compiler. Do not hand-edit generated blocks.\nimport Vide from "@rbxts/vide";\n${imports}\nexport interface ${componentName}Props {\n\tvisible?: boolean;\n${propLines ? `${propLines}\n` : ""}}\n\nexport function ${componentName}(${propsParameter}) {\n\treturn (\n${body}\n\t);\n}\n\nexport default ${componentName};\n`;
 	const files = [{ path: `${componentName}.tsx`, contents }];

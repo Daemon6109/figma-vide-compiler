@@ -3,11 +3,11 @@ import { join } from "node:path";
 import { compileFigmaToVide, type CompileOptions, type FigmaDocument } from "../index";
 
 const usage = `Usage:
-  bun src/bin/compile.ts <figma-export.json> <out-dir> [ComponentName] [--runtime] [--preserve-root] [--asphalt]
+  bun src/bin/compile.ts <figma-export.json> <out-dir> [ComponentName] [--runtime] [--preserve-root] [--asphalt] [--use-px]
 
 Examples:
   bun src/bin/compile.ts figma-vide-export.json out InventoryScreen
-  bun src/bin/compile.ts figma-vide-export.json out InventoryScreen --runtime --asphalt
+  bun src/bin/compile.ts figma-vide-export.json out InventoryScreen --runtime --asphalt --use-px
 `;
 
 const [, , inputPath, outDir, maybeComponentName, ...flags] = Bun.argv;
@@ -27,6 +27,7 @@ const options: CompileOptions = {
 	componentName,
 	includeRuntime: allFlags.has("--runtime"),
 	preserveRootPosition: allFlags.has("--preserve-root"),
+	usePx: allFlags.has("--use-px"),
 	assetImport: useAsphalt ? 'import { figmaAsset } from "./figma-assets";' : undefined,
 	assetExpressionResolver: useAsphalt ? (imageRef: string) => `figmaAsset(${JSON.stringify(imageRef)})` : undefined,
 };

@@ -114,6 +114,10 @@ export type CompileOptions = {
 	/** Return a TSX expression for an image ref. Overrides assetResolver when supplied. */
 	assetExpressionResolver?: (imageRef: string, node: FigmaNode) => string;
 	assetImport?: string;
+	/** Emit px.useUDim2/useNumber/useUDim wrappers instead of fixed offset numbers. */
+	usePx?: boolean;
+	/** Import line for the px module when usePx is enabled. */
+	pxImport?: string;
 	includeManifest?: boolean;
 	includeRuntime?: boolean;
 };

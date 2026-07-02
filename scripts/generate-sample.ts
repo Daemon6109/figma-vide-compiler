@@ -5,6 +5,8 @@ const document = JSON.parse(readFileSync("examples/level-hud-wireframe.json", "u
 const result = compileFigmaToVide(document, {
 	componentName: "LevelHudWireframe",
 	includeRuntime: true,
+	usePx: true,
+	pxImport: 'import px from "../shared/px";',
 });
 
 mkdirSync("src-roblox/generated", { recursive: true });

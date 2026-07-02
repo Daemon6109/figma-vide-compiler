@@ -113,3 +113,23 @@ bun run compile figma-vide-export.json out InventoryScreen --runtime --asphalt
 ```
 
 The compiler writes image files under `out/assets/figma`, a starter `asphalt.toml`, and a `figma-assets.ts` bridge. After setting the creator id, run Asphalt from `out/` to upload and generate real asset ids.
+
+## Responsive Roblox scaling with `px`
+
+The Roblox preview now includes an Interface-style `px` helper copied from Anime Reborn Interface. Use `--use-px` when compiling to wrap pixel values in reactive scale functions:
+
+```bash
+bun run compile figma-vide-export.json out InventoryScreen --runtime --asphalt --use-px
+```
+
+Generated TSX uses:
+
+```tsx
+Position={px.useUDim2(x, y)}
+Size={px.useUDim2(width, height)}
+TextSize={px.useNumber(size)}
+<uicorner CornerRadius={px.useUDim(radius)} />
+<uistroke Thickness={px.useNumber(thickness)} />
+```
+
+In UI Labs/Studio, call `px.setTarget(Workspace.CurrentCamera)` so scaling follows the viewport. The included UI Labs story does this automatically.

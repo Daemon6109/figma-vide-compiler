@@ -1,5 +1,7 @@
 import { CreateVideStory, Number as UILabsNumber } from "@rbxts/ui-labs";
+import { Workspace } from "@rbxts/services";
 import Vide, { source } from "@rbxts/vide";
+import px from "../shared/px";
 import LevelHudWireframe from "../generated/LevelHudWireframe";
 
 const controls = {
@@ -25,6 +27,8 @@ export = CreateVideStory(
 		controls,
 	},
 	(storyProps) => {
+		if (Workspace.CurrentCamera) px.setTarget(Workspace.CurrentCamera);
+
 		const selectedTower = source("none");
 
 		return (
