@@ -158,6 +158,8 @@ describe("figma to vide compiler", () => {
 		}, { componentName: "ScaledRoot", usePx: true, pxImport: 'import px from "../shared/px";' });
 		const tsx = result.files.find((file) => file.path === "ScaledRoot.tsx")?.contents ?? "";
 		expect(tsx).toContain('import px from "../shared/px";');
+		expect(tsx).toContain("AnchorPoint={new Vector2(0.5, 0.5)}");
+		expect(tsx).toContain("Position={UDim2.fromScale(0.5, 0.5)}");
 		expect(tsx).toContain("Position={px.useUDim2(100, 80)}");
 		expect(tsx).toContain("TextSize={px.useNumber(42)}");
 		expect(tsx).toContain("CornerRadius={px.useUDim(12)}");

@@ -269,13 +269,16 @@ const emitNode = (
 	const tag = jsxTagFor(node);
 	const annotations = parseAnnotations(node.name);
 	const rect = rectFor(node, screen);
+	const isRoot = parentRect === undefined;
 	const relativeX = parentRect ? rect.x - parentRect.x : preserveRootPosition ? rect.x : 0;
 	const relativeY = parentRect ? rect.y - parentRect.y : preserveRootPosition ? rect.y : 0;
 	const fill = getSolidPaint(node.fills);
 	const image = getImagePaint(node.fills);
 	const props: string[] = [
 		rawPropLine("Name", stringLiteral(displayName(node.name))),
-		propLine("Position", sizeExpression(relativeX, relativeY, usePx)),
+		...(isRoot && usePx && !preserveRootPosition
+			? [propLine("AnchorPoint", "new Vector2(0.5, 0.5)"), propLine("Position", "UDim2.fromScale(0.5, 0.5)")]
+			: [propLine("Position", sizeExpression(relativeX, relativeY, usePx))]),
 		propLine("Size", sizeExpression(rect.width, rect.height, usePx)),
 	];
 	if (node.visible === false) props.push(propLine("Visible", "false"));

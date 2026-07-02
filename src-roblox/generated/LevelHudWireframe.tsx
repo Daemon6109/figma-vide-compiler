@@ -24,7 +24,8 @@ export function LevelHudWireframe(props: LevelHudWireframeProps) {
 	return (
 		<frame 
 			Name="Level HUD Wireframe"
-			Position={px.useUDim2(0, 0)}
+			AnchorPoint={new Vector2(0.5, 0.5)}
+			Position={UDim2.fromScale(0.5, 0.5)}
 			Size={px.useUDim2(1920, 1080)}
 			ClipsDescendants={true}
 			BackgroundColor3={Color3.fromRGB(10, 11, 15)}
