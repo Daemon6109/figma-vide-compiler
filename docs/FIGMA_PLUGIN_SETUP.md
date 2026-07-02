@@ -70,3 +70,23 @@ asphalt sync
 ```
 
 Asphalt generates the final `assets` module with real Roblox asset ids. The generated Vide component imports `figmaAsset(...)`, which maps Figma image hashes to those Asphalt paths.
+
+## Generate the sample level HUD inside Figma
+
+The plugin includes a built-in wireframe generator for quick testing:
+
+1. Run `Figma to Vide Exporter` in Figma.
+2. Click `Create level HUD`.
+3. The plugin creates a native `1920×1080` Figma frame with:
+   - top wave/timer/speed bar
+   - left lives/yen panel
+   - six-slot tower hotbar
+   - placement hint panel
+   - compiler annotations like `#bind=waveText` and `#on=onTower1`
+4. Edit/animate the frame in Figma.
+5. Select the root frame and click `Export selection`.
+6. Compile the exported JSON:
+
+```bash
+bun run compile figma-vide-export.json out LevelHudWireframe --runtime --asphalt
+```
