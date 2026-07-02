@@ -10,10 +10,23 @@
 		"test": "bun test tests",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"check": "bun run typecheck && bun test tests",
-		"compile": "bun src/bin/compile.ts"
+		"compile": "bun src/bin/compile.ts",
+		"generate:sample": "bun scripts/generate-sample.ts",
+		"compile:rbxts": "bun run generate:sample && rbxtsc -p tsconfig.roblox.json --type game",
+		"build:rbxl": "bun run compile:rbxts && rojo build default.project.json -o figma-vide-preview.rbxl",
+		"serve": "bun run compile:rbxts && rojo serve default.project.json"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
+		"roblox-ts": "^3.0.0",
+		"rojo": "^1.0.3-rojo7.6.1",
 		"typescript": "=5.5.3"
+	},
+	"dependencies": {
+		"@rbxts/compiler-types": "^3.0.0-types.0",
+		"@rbxts/services": "^1.6.0",
+		"@rbxts/types": "^1.0.933",
+		"@rbxts/ui-labs": "^2.4.2",
+		"@rbxts/vide": "^0.6.1"
 	}
 }

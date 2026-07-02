@@ -1,0 +1,109 @@
+{
+  "document": {
+    "id": "level-root",
+    "name": "Level HUD Wireframe",
+    "type": "FRAME",
+    "visible": true,
+    "opacity": 1,
+    "absoluteBoundingBox": { "x": 0, "y": 0, "width": 1920, "height": 1080 },
+    "fills": [{ "type": "SOLID", "visible": true, "opacity": 1, "color": { "r": 0.04, "g": 0.045, "b": 0.06, "a": 1 } }],
+    "clipsContent": true,
+    "children": [
+      {
+        "id": "top-bar",
+        "name": "Top Bar",
+        "type": "FRAME",
+        "absoluteBoundingBox": { "x": 560, "y": 24, "width": 800, "height": 92 },
+        "fills": [{ "type": "SOLID", "color": { "r": 0.1, "g": 0.11, "b": 0.14, "a": 0.9 } }],
+        "cornerRadius": 18,
+        "strokes": [{ "type": "SOLID", "color": { "r": 0.35, "g": 0.38, "b": 0.48, "a": 1 } }],
+        "strokeWeight": 2,
+        "children": [
+          {
+            "id": "wave-text",
+            "name": "Wave Text #bind=waveText",
+            "type": "TEXT",
+            "characters": "WAVE 1 / 30",
+            "absoluteBoundingBox": { "x": 610, "y": 48, "width": 240, "height": 42 },
+            "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 0.9, "b": 0.45, "a": 1 } }],
+            "style": { "fontFamily": "Gotham", "fontSize": 30, "textAlignHorizontal": "LEFT", "textAlignVertical": "CENTER" }
+          },
+          {
+            "id": "timer-text",
+            "name": "Timer Text #bind=timerText",
+            "type": "TEXT",
+            "characters": "01:25",
+            "absoluteBoundingBox": { "x": 880, "y": 48, "width": 160, "height": 42 },
+            "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 1 } }],
+            "style": { "fontFamily": "Gotham", "fontSize": 32, "textAlignHorizontal": "CENTER", "textAlignVertical": "CENTER" }
+          },
+          {
+            "id": "speed-button",
+            "name": "Speed Button #on=onToggleSpeed",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 1110, "y": 44, "width": 190, "height": 50 },
+            "fills": [{ "type": "SOLID", "color": { "r": 0.18, "g": 0.22, "b": 0.3, "a": 1 } }],
+            "cornerRadius": 12,
+            "children": [
+              {
+                "id": "speed-label",
+                "name": "Speed Label #bind=speedText",
+                "type": "TEXT",
+                "characters": "1x SPEED",
+                "absoluteBoundingBox": { "x": 1130, "y": 52, "width": 150, "height": 34 },
+                "fills": [{ "type": "SOLID", "color": { "r": 0.75, "g": 0.9, "b": 1, "a": 1 } }],
+                "style": { "fontFamily": "Gotham", "fontSize": 22, "textAlignHorizontal": "CENTER", "textAlignVertical": "CENTER" }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "left-stats",
+        "name": "Left Stats Panel",
+        "type": "FRAME",
+        "absoluteBoundingBox": { "x": 32, "y": 32, "width": 300, "height": 150 },
+        "fills": [{ "type": "SOLID", "color": { "r": 0.09, "g": 0.1, "b": 0.13, "a": 0.88 } }],
+        "cornerRadius": 16,
+        "children": [
+          {
+            "id": "lives",
+            "name": "Lives Text #bind=livesText",
+            "type": "TEXT",
+            "characters": "❤ 100",
+            "absoluteBoundingBox": { "x": 58, "y": 54, "width": 220, "height": 38 },
+            "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 0.35, "b": 0.35, "a": 1 } }],
+            "style": { "fontFamily": "Gotham", "fontSize": 28, "textAlignHorizontal": "LEFT", "textAlignVertical": "CENTER" }
+          },
+          {
+            "id": "yen",
+            "name": "Yen Text #bind=yenText",
+            "type": "TEXT",
+            "characters": "¥ 500",
+            "absoluteBoundingBox": { "x": 58, "y": 108, "width": 220, "height": 38 },
+            "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 0.82, "b": 0.22, "a": 1 } }],
+            "style": { "fontFamily": "Gotham", "fontSize": 28, "textAlignHorizontal": "LEFT", "textAlignVertical": "CENTER" }
+          }
+        ]
+      },
+      {
+        "id": "bottom-hotbar",
+        "name": "Bottom Hotbar #repeat=towers",
+        "type": "FRAME",
+        "absoluteBoundingBox": { "x": 390, "y": 880, "width": 1140, "height": 160 },
+        "fills": [{ "type": "SOLID", "color": { "r": 0.08, "g": 0.085, "b": 0.11, "a": 0.94 } }],
+        "cornerRadius": 24,
+        "strokes": [{ "type": "SOLID", "color": { "r": 0.28, "g": 0.3, "b": 0.38, "a": 1 } }],
+        "strokeWeight": 2,
+        "children": [
+          { "id": "slot-1", "name": "Tower Slot 1 #on=onTower1", "type": "FRAME", "absoluteBoundingBox": { "x": 420, "y": 910, "width": 150, "height": 110 }, "fills": [{ "type": "SOLID", "color": { "r": 0.14, "g": 0.15, "b": 0.2, "a": 1 } }], "cornerRadius": 16 },
+          { "id": "slot-2", "name": "Tower Slot 2 #on=onTower2", "type": "FRAME", "absoluteBoundingBox": { "x": 600, "y": 910, "width": 150, "height": 110 }, "fills": [{ "type": "SOLID", "color": { "r": 0.14, "g": 0.15, "b": 0.2, "a": 1 } }], "cornerRadius": 16 },
+          { "id": "slot-3", "name": "Tower Slot 3 #on=onTower3", "type": "FRAME", "absoluteBoundingBox": { "x": 780, "y": 910, "width": 150, "height": 110 }, "fills": [{ "type": "SOLID", "color": { "r": 0.14, "g": 0.15, "b": 0.2, "a": 1 } }], "cornerRadius": 16 },
+          { "id": "slot-4", "name": "Tower Slot 4 #on=onTower4", "type": "FRAME", "absoluteBoundingBox": { "x": 960, "y": 910, "width": 150, "height": 110 }, "fills": [{ "type": "SOLID", "color": { "r": 0.14, "g": 0.15, "b": 0.2, "a": 1 } }], "cornerRadius": 16 },
+          { "id": "slot-5", "name": "Tower Slot 5 #on=onTower5", "type": "FRAME", "absoluteBoundingBox": { "x": 1140, "y": 910, "width": 150, "height": 110 }, "fills": [{ "type": "SOLID", "color": { "r": 0.14, "g": 0.15, "b": 0.2, "a": 1 } }], "cornerRadius": 16 },
+          { "id": "slot-6", "name": "Tower Slot 6 #on=onTower6", "type": "FRAME", "absoluteBoundingBox": { "x": 1320, "y": 910, "width": 150, "height": 110 }, "fills": [{ "type": "SOLID", "color": { "r": 0.14, "g": 0.15, "b": 0.2, "a": 1 } }], "cornerRadius": 16 }
+        ]
+      }
+    ]
+  }
+}

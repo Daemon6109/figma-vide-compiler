@@ -1,0 +1,26 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "commonjs",
+		"moduleResolution": "Node",
+		"moduleDetection": "force",
+		"strict": true,
+		"noLib": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"downlevelIteration": true,
+		"resolveJsonModule": true,
+		"jsx": "react",
+		"jsxFactory": "Vide.jsx",
+		"jsxFragmentFactory": "Vide.Fragment",
+		"typeRoots": ["node_modules/@rbxts"],
+		"outDir": "dist-roblox",
+		"rootDir": "src-roblox",
+		"declaration": false,
+		"sourceMap": true,
+		"skipLibCheck": true,
+		"types": ["types", "compiler-types"]
+	},
+	"include": ["src-roblox/**/*"]
+}
