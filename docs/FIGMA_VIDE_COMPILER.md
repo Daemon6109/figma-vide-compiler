@@ -85,3 +85,31 @@ The realistic path to near-full compatibility is staged:
 7. **Advanced effects** — shadows/blur need Roblox-specific approximations because Roblox GUI has no perfect native Figma blur/drop-shadow equivalent.
 
 Use `--runtime` when compiling to generate `figma-animation-runtime.ts` next to the screen component.
+
+## Designer layer annotations
+
+Layer names can include compiler hints:
+
+```txt
+Coins Text #bind=coins
+Start Button #on=onStart
+Unit Grid #repeat=units
+```
+
+Current behavior:
+
+- `#bind=name` on text emits a required prop `name: () => string | number` and uses `Text={tostring(props.name())}`.
+- `#on=name` on a button/image button emits a required prop `name: () => void` and wires `Activated={props.name}`.
+- `#repeat=name` currently emits a typed prop marker. Full repeated child generation is next.
+
+The visible Roblox `Name` strips the annotation suffix, so `Coins Text #bind=coins` becomes `Name="Coins Text"`.
+
+## Asphalt image pipeline
+
+Use `--asphalt` to make image fills usable in Roblox without manually uploading every icon:
+
+```bash
+bun run compile figma-vide-export.json out InventoryScreen --runtime --asphalt
+```
+
+The compiler writes image files under `out/assets/figma`, a starter `asphalt.toml`, and a `figma-assets.ts` bridge. After setting the creator id, run Asphalt from `out/` to upload and generate real asset ids.

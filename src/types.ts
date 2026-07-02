@@ -99,6 +99,7 @@ export type FigmaNode = {
 
 export type FigmaDocument = {
 	document: FigmaNode;
+	assets?: Record<string, { fileName: string; mimeType: string; base64: string }>;
 	components?: Record<string, { name: string; description?: string }>;
 	styles?: Record<string, { name: string; styleType: string; description?: string }>;
 };
@@ -110,6 +111,9 @@ export type CompileOptions = {
 	/** Keep the selected root frame at its Figma canvas coordinates. Defaults to false so generated screens mount at 0,0. */
 	preserveRootPosition?: boolean;
 	assetResolver?: (imageRef: string, node: FigmaNode) => string;
+	/** Return a TSX expression for an image ref. Overrides assetResolver when supplied. */
+	assetExpressionResolver?: (imageRef: string, node: FigmaNode) => string;
+	assetImport?: string;
 	includeManifest?: boolean;
 	includeRuntime?: boolean;
 };

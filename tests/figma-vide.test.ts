@@ -105,4 +105,35 @@ describe("figma to vide compiler", () => {
 		expect(tsx).toContain("Position={UDim2.fromOffset(21, 29)}");
 	});
 
+	it("supports layer annotations for bound text and button callbacks", () => {
+		const result = compileFigmaToVide({
+			document: {
+				id: "root",
+				name: "Annotated Root",
+				type: "FRAME",
+				absoluteBoundingBox: { x: 0, y: 0, width: 500, height: 300 },
+				children: [
+					{
+						id: "coins",
+						name: "Coins Text #bind=coins",
+						type: "TEXT",
+						absoluteBoundingBox: { x: 10, y: 10, width: 100, height: 30 },
+					},
+					{
+						id: "start",
+						name: "Start Button #on=onStart",
+						type: "FRAME",
+						absoluteBoundingBox: { x: 10, y: 60, width: 120, height: 40 },
+					},
+				],
+			},
+		}, { componentName: "AnnotatedRoot" });
+		const tsx = result.files.find((file) => file.path === "AnnotatedRoot.tsx")?.contents ?? "";
+		expect(tsx).toContain("coins: () => string | number;");
+		expect(tsx).toContain("onStart: () => void;");
+		expect(tsx).toContain("Name=\"Coins Text\"");
+		expect(tsx).toContain("Text={tostring(props.coins())}");
+		expect(tsx).toContain("Activated={props.onStart}");
+	});
+
 });

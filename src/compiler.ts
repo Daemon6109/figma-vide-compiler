@@ -13,6 +13,34 @@ const sanitizeIdentifier = (name: string): string => {
 	return /^[0-9]/.test(base) ? `Ui${base}` : base;
 };
 
+const displayName = (name: string): string => name.replace(/\s+#(?:bind|on|repeat|prop|variant)=[^\s]+/g, "").trim() || name;
+
+type LayerAnnotations = {
+	bind?: string;
+	on?: string;
+	repeat?: string;
+	prop?: string;
+	variant?: string;
+};
+
+const parseAnnotations = (name: string): LayerAnnotations => {
+	const annotations: LayerAnnotations = {};
+	for (const [, key, value] of name.matchAll(/#(bind|on|repeat|prop|variant)=([A-Za-z0-9_.-]+)/g)) {
+		annotations[key as keyof LayerAnnotations] = value;
+	}
+	return annotations;
+};
+
+const collectPropTypes = (node: FigmaNode, props = new Map<string, string>()): Map<string, string> => {
+	const annotations = parseAnnotations(node.name);
+	if (annotations.bind) props.set(annotations.bind, "() => string | number");
+	if (annotations.on) props.set(annotations.on, "() => void");
+	if (annotations.prop) props.set(annotations.prop, "unknown");
+	if (annotations.repeat) props.set(annotations.repeat, "ReadonlyArray<unknown>");
+	for (const child of node.children ?? []) collectPropTypes(child, props);
+	return props;
+};
+
 const indent = (text: string, depth = 1): string =>
 	text
 		.split("\n")
@@ -97,7 +125,85 @@ const emitAnimationManifest = (root: FigmaNode): string => {
 	return `// Auto-generated from Figma prototype reactions.\n// Use createFigmaAnimationRuntime(...) from the generated runtime helper to bind common triggers.\nexport const figmaAnimationManifest = [\n${entries.join(",\n")}\n] as const;\n\nexport type FigmaAnimationManifest = typeof figmaAnimationManifest;\n`;
 };
 
-const emitAnimationRuntime = (): string => `// Auto-generated helper for generated Figma animation manifests.\nimport { TweenService } from "@rbxts/services";\n\nexport type FigmaAnimationEntry = {\n\tnodeId: string;\n\tnodeName: string;\n\ttrigger: string;\n\taction: string;\n\tdestinationId?: string;\n\tduration: number;\n\teasingStyle: Enum.EasingStyle;\n\teasingDirection: Enum.EasingDirection;\n};\n\nexport type FigmaAnimationRuntimeOptions = {\n\troot: Instance;\n\tmanifest: readonly FigmaAnimationEntry[];\n\topenByDestinationId?: Record<string, () => void>;\n\tdebug?: boolean;\n};\n\nconst findGuiObject = (root: Instance, name: string): GuiObject | undefined => {\n\tfor (const descendant of root.GetDescendants()) {\n\t\tif (descendant.Name === name && descendant.IsA("GuiObject")) return descendant;\n\t}\n\treturn undefined;\n};\n\nexport const tweenFigmaGui = (gui: GuiObject, entry: FigmaAnimationEntry, goal: Partial<ExtractMembers<GuiObject, Tweenable>> = {}) => {\n\tconst info = new TweenInfo(entry.duration, entry.easingStyle, entry.easingDirection);\n\treturn TweenService.Create(gui, info, goal);\n};\n\nexport const createFigmaAnimationRuntime = (options: FigmaAnimationRuntimeOptions) => {\n\tconst cleanup: Array<() => void> = [];\n\n\tfor (const entry of options.manifest) {\n\t\tconst gui = findGuiObject(options.root, entry.nodeName);\n\t\tif (!gui) {\n\t\t\tif (options.debug) warn("[figma-vide] missing gui object " + entry.nodeName);\n\t\t\tcontinue;\n\t\t}\n\n\t\tif (entry.trigger === "ON_CLICK" && (gui.IsA("GuiButton") || gui.IsA("TextButton") || gui.IsA("ImageButton"))) {\n\t\t\tconst connection = gui.Activated.Connect(() => {\n\t\t\t\tif (entry.destinationId !== undefined) options.openByDestinationId?.[entry.destinationId]?.();\n\t\t\t\tconst tween = tweenFigmaGui(gui, entry, { Rotation: gui.Rotation + 0 });\n\t\t\t\ttween.Play();\n\t\t\t});\n\t\t\tcleanup.push(() => connection.Disconnect());\n\t\t}\n\t}\n\n\treturn {\n\t\tdestroy: () => {\n\t\t\tfor (const dispose of cleanup) dispose();\n\t\t\ttable.clear(cleanup);\n\t\t},\n\t};\n};\n`;
+const emitAnimationRuntime = (): string => `// Auto-generated helper for generated Figma animation manifests.
+import { TweenService } from "@rbxts/services";
+
+export type FigmaAnimationEntry = {
+	nodeId: string;
+	nodeName: string;
+	trigger: string;
+	action: string;
+	destinationId?: string;
+	duration: number;
+	easingStyle: Enum.EasingStyle;
+	easingDirection: Enum.EasingDirection;
+};
+
+export type FigmaAnimationRuntimeOptions = {
+	root: Instance;
+	manifest: readonly FigmaAnimationEntry[];
+	openByDestinationId?: Record<string, () => void>;
+	onTrigger?: (entry: FigmaAnimationEntry, gui: GuiObject) => void;
+	debug?: boolean;
+};
+
+const findGuiObject = (root: Instance, name: string): GuiObject | undefined => {
+	for (const descendant of root.GetDescendants()) {
+		if (descendant.Name === name && descendant.IsA("GuiObject")) return descendant;
+	}
+	return undefined;
+};
+
+export const tweenFigmaGui = (gui: GuiObject, entry: FigmaAnimationEntry, goal: Partial<ExtractMembers<GuiObject, Tweenable>> = {}) => {
+	const info = new TweenInfo(entry.duration, entry.easingStyle, entry.easingDirection);
+	return TweenService.Create(gui, info, goal);
+};
+
+export const createFigmaAnimationRuntime = (options: FigmaAnimationRuntimeOptions) => {
+	const cleanup: Array<() => void> = [];
+
+	for (const entry of options.manifest) {
+		const gui = findGuiObject(options.root, entry.nodeName);
+		if (!gui) {
+			if (options.debug) warn("[figma-vide] missing gui object " + entry.nodeName);
+			continue;
+		}
+
+		if (entry.trigger === "ON_CLICK" && (gui.IsA("GuiButton") || gui.IsA("TextButton") || gui.IsA("ImageButton"))) {
+			const connection = gui.Activated.Connect(() => {
+				if (entry.destinationId !== undefined) options.openByDestinationId?.[entry.destinationId]?.();
+				options.onTrigger?.(entry, gui);
+				const tween = tweenFigmaGui(gui, entry, { Rotation: gui.Rotation + 0 });
+				tween.Play();
+			});
+			cleanup.push(() => connection.Disconnect());
+		}
+
+		if (entry.trigger === "MOUSE_ENTER" || entry.trigger === "ON_HOVER") {
+			const connection = gui.MouseEnter.Connect(() => options.onTrigger?.(entry, gui));
+			cleanup.push(() => connection.Disconnect());
+		}
+
+		if (entry.trigger === "MOUSE_LEAVE") {
+			const connection = gui.MouseLeave.Connect(() => options.onTrigger?.(entry, gui));
+			cleanup.push(() => connection.Disconnect());
+		}
+
+		if (entry.trigger === "AFTER_TIMEOUT") {
+			task.delay(entry.duration, () => {
+				if (gui.Parent !== undefined) options.onTrigger?.(entry, gui);
+			});
+		}
+	}
+
+	return {
+		destroy: () => {
+			for (const dispose of cleanup) dispose();
+			table.clear(cleanup);
+		},
+	};
+};
+`;
 
 const propLine = (name: string, expression: string): string => `${name}={${expression}}`;
 const rawPropLine = (name: string, expression: string): string => `${name}=${expression}`;
@@ -144,11 +250,13 @@ const emitNode = (
 	node: FigmaNode,
 	screen: { width: number; height: number },
 	assetResolver: NonNullable<CompileOptions["assetResolver"]>,
+	assetExpressionResolver: NonNullable<CompileOptions["assetExpressionResolver"]>,
 	parentRect?: { x: number; y: number; width: number; height: number },
 	preserveRootPosition = false,
 	depth = 0,
 ): string => {
 	const tag = jsxTagFor(node);
+	const annotations = parseAnnotations(node.name);
 	const rect = rectFor(node, screen);
 	const relativeX = parentRect ? rect.x - parentRect.x : preserveRootPosition ? rect.x : 0;
 	const relativeY = parentRect ? rect.y - parentRect.y : preserveRootPosition ? rect.y : 0;
@@ -156,7 +264,7 @@ const emitNode = (
 	const image = getImagePaint(node.fills);
 	const props: string[] = [
 		rawPropLine("key", stringLiteral(node.id)),
-		rawPropLine("Name", stringLiteral(node.name)),
+		rawPropLine("Name", stringLiteral(displayName(node.name))),
 		propLine("Position", `UDim2.fromOffset(${numberLiteral(relativeX)}, ${numberLiteral(relativeY)})`),
 		propLine("Size", `UDim2.fromOffset(${numberLiteral(rect.width)}, ${numberLiteral(rect.height)})`),
 	];
@@ -170,7 +278,7 @@ const emitNode = (
 		props.push(propLine("BackgroundTransparency", "1"));
 	}
 	if (tag === "textlabel" || tag === "textbutton") {
-		props.push(rawPropLine("Text", stringLiteral(node.characters ?? node.name)));
+		props.push(annotations.bind ? propLine("Text", `tostring(props.${annotations.bind}())`) : rawPropLine("Text", stringLiteral(node.characters ?? displayName(node.name))));
 		props.push(propLine("BackgroundTransparency", "1"));
 		if (fill?.color) props.push(propLine("TextColor3", color3(fill.color)));
 		if (node.style?.fontSize) props.push(propLine("TextSize", numberLiteral(node.style.fontSize)));
@@ -180,8 +288,9 @@ const emitNode = (
 		if (alignY) props.push(propLine("TextYAlignment", alignY));
 		props.push(propLine("FontFace", `Font.fromName(${stringLiteral(node.style?.fontFamily ?? "Gotham")})`));
 	}
+	if (annotations.on && (tag === "textbutton" || tag === "imagebutton")) props.push(propLine("Activated", `props.${annotations.on}`));
 	if ((tag === "imagelabel" || tag === "imagebutton") && image?.imageRef) {
-		props.push(rawPropLine("Image", stringLiteral(assetResolver(image.imageRef, node))));
+		props.push(propLine("Image", assetExpressionResolver(image.imageRef, node)));
 		props.push(propLine("ImageTransparency", transparency(image, node.opacity ?? 1)));
 		props.push(propLine("BackgroundTransparency", "1"));
 	}
@@ -189,7 +298,7 @@ const emitNode = (
 	const layoutHelpers = emitLayoutHelpers(node);
 	const childNodes = (node.children ?? [])
 		.filter((child) => child.visible !== false)
-		.map((child) => emitNode(child, screen, assetResolver, rect, preserveRootPosition, depth + 1));
+		.map((child) => emitNode(child, screen, assetResolver, assetExpressionResolver, rect, preserveRootPosition, depth + 1));
 	const children = [...decorators, ...layoutHelpers, ...childNodes];
 	const joinedProps = props.length <= 4 ? props.join(" ") : `\n${indent(props.join("\n"), depth + 1)}\n${"\t".repeat(depth)}`;
 	if (children.length === 0) return `${"\t".repeat(depth)}<${tag} ${joinedProps} />`;
@@ -215,8 +324,12 @@ export const compileFigmaToVide = (document: FigmaDocument, options: CompileOpti
 	const componentName = options.componentName ?? sanitizeIdentifier(root.name);
 	const warnings: string[] = [];
 	const assetResolver = options.assetResolver ?? ((imageRef: string) => `rbxassetid://${imageRef}`);
-	const body = emitNode(root, screen, assetResolver, undefined, options.preserveRootPosition ?? false, 2);
-	const contents = `/* eslint-disable */\n// Auto-generated by Anime Renaissance Figma → Vide compiler. Do not hand-edit generated blocks.\nimport Vide from "@rbxts/vide";\n\nexport interface ${componentName}Props {\n\tvisible?: boolean;\n}\n\nexport function ${componentName}(props: ${componentName}Props = {}) {\n\treturn (\n${body}\n\t);\n}\n\nexport default ${componentName};\n`;
+	const assetExpressionResolver = options.assetExpressionResolver ?? ((imageRef: string, node: FigmaNode) => stringLiteral(assetResolver(imageRef, node)));
+	const body = emitNode(root, screen, assetResolver, assetExpressionResolver, undefined, options.preserveRootPosition ?? false, 2);
+	const componentProps = collectPropTypes(root);
+	const propLines = [...componentProps].map(([name, type]) => `\t${name}: ${type};`).join("\n");
+	const imports = options.assetImport ? `${options.assetImport}\n` : "";
+	const contents = `/* eslint-disable */\n// Auto-generated by Anime Renaissance Figma → Vide compiler. Do not hand-edit generated blocks.\nimport Vide from "@rbxts/vide";\n${imports}\nexport interface ${componentName}Props {\n\tvisible?: boolean;\n${propLines ? `${propLines}\n` : ""}}\n\nexport function ${componentName}(props: ${componentName}Props = {}) {\n\treturn (\n${body}\n\t);\n}\n\nexport default ${componentName};\n`;
 	const files = [{ path: `${componentName}.tsx`, contents }];
 	if (options.includeManifest !== false) files.push({ path: `${componentName}.animations.ts`, contents: emitAnimationManifest(root) });
 	if (options.includeRuntime) files.push({ path: "figma-animation-runtime.ts", contents: emitAnimationRuntime() });

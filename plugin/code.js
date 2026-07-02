@@ -16,7 +16,7 @@ function cloneColor(color, opacity) {
 	};
 }
 
-function serializePaint(paint) {
+async function serializePaint(paint, assets) {
 	if (!paint || isMixed(paint)) return undefined;
 	const base = {
 		type: paint.type,
@@ -27,6 +27,21 @@ function serializePaint(paint) {
 		return { ...base, color: cloneColor(paint.color, paint.opacity ?? 1) };
 	}
 	if (paint.type === "IMAGE") {
+		if (paint.imageHash && assets && !assets[paint.imageHash]) {
+			try {
+				const image = figma.getImageByHash(paint.imageHash);
+				const bytes = await image.getBytesAsync();
+				let binary = "";
+				for (const byte of bytes) binary += String.fromCharCode(byte);
+				assets[paint.imageHash] = {
+					fileName: `${paint.imageHash}.png`,
+					mimeType: "image/png",
+					base64: btoa(binary),
+				};
+			} catch (error) {
+				console.warn("Failed to export image", paint.imageHash, error);
+			}
+		}
 		return {
 			...base,
 			imageRef: paint.imageHash,
@@ -89,13 +104,13 @@ function serializeReactions(node) {
 	}));
 }
 
-function serializeNode(node) {
+async function serializeNode(node, assets) {
 	const box = maybeRead(node, "absoluteBoundingBox");
 	const fills = maybeRead(node, "fills");
 	const strokes = maybeRead(node, "strokes");
 	const effects = maybeRead(node, "effects");
 	const exportSettings = maybeRead(node, "exportSettings");
-	const children = "children" in node ? node.children.map(serializeNode) : undefined;
+	const children = "children" in node ? await Promise.all(node.children.map((child) => serializeNode(child, assets))) : undefined;
 
 	return {
 		id: node.id,
@@ -111,8 +126,8 @@ function serializeNode(node) {
 					height: box.height,
 				}
 			: undefined,
-		fills: Array.isArray(fills) ? fills.map(serializePaint).filter(Boolean) : undefined,
-		strokes: Array.isArray(strokes) ? strokes.map(serializePaint).filter(Boolean) : undefined,
+		fills: Array.isArray(fills) ? (await Promise.all(fills.map((paint) => serializePaint(paint, assets)))).filter(Boolean) : undefined,
+		strokes: Array.isArray(strokes) ? (await Promise.all(strokes.map((paint) => serializePaint(paint, assets)))).filter(Boolean) : undefined,
 		strokeWeight: isMixed(maybeRead(node, "strokeWeight")) ? undefined : maybeRead(node, "strokeWeight"),
 		cornerRadius: isMixed(maybeRead(node, "cornerRadius")) ? undefined : maybeRead(node, "cornerRadius"),
 		rectangleCornerRadii: isMixed(maybeRead(node, "cornerRadius")) ? maybeRead(node, "rectangleCornerRadii") : undefined,
@@ -137,13 +152,14 @@ function serializeNode(node) {
 	};
 }
 
-function selectionToDocument() {
+async function selectionToDocument() {
+	const assets = {};
 	const selection = figma.currentPage.selection;
 	if (selection.length === 0) {
 		throw new Error("Select one frame/component/group/text node first.");
 	}
 	if (selection.length === 1) {
-		return { document: serializeNode(selection[0]) };
+		return { document: await serializeNode(selection[0], assets), assets };
 	}
 	const bounds = selection.reduce(
 		(acc, node) => {
@@ -169,14 +185,14 @@ function selectionToDocument() {
 				width: Number.isFinite(bounds.x2 - bounds.x1) ? bounds.x2 - bounds.x1 : 0,
 				height: Number.isFinite(bounds.y2 - bounds.y1) ? bounds.y2 - bounds.y1 : 0,
 			},
-			children: selection.map(serializeNode),
+			children: await Promise.all(selection.map((node) => serializeNode(node, assets))),
 		},
 	};
 }
 
-function postExport() {
+async function postExport() {
 	try {
-		const payload = selectionToDocument();
+		const payload = await selectionToDocument();
 		figma.ui.postMessage({ type: "export", payload });
 		figma.notify("Exported selected Figma UI JSON.");
 	} catch (error) {

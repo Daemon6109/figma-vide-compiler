@@ -43,3 +43,13 @@ bun run compile ./figma-vide-export.json ./out InventoryScreen --runtime
 ```
 
 See `docs/FIGMA_PLUGIN_SETUP.md`.
+
+## Image assets via Asphalt
+
+Compile with Asphalt support:
+
+```bash
+bun run compile ./figma-vide-export.json ./out InventoryScreen --runtime --asphalt
+```
+
+Then edit `out/asphalt.toml` with your Roblox creator id and run `asphalt sync` from `out/`.
