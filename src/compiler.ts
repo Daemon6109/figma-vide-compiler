@@ -166,7 +166,7 @@ export const createFigmaAnimationRuntime = (options: FigmaAnimationRuntimeOption
 	for (const entry of options.manifest) {
 		const gui = findGuiObject(options.root, entry.nodeName);
 		if (!gui) {
-			if (options.debug) warn("[figma-vide] missing gui object " + entry.nodeName);
+			if (options.debug) warn(\`[figma-vide] missing gui object \${entry.nodeName}\`);
 			continue;
 		}
 
